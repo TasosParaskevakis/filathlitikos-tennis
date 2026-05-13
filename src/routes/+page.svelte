@@ -3,4 +3,4 @@
 </script>
 
 <h1>Players: {data.count}</h1>
-{#if data.error}<p style="color:red">{data.error}</p>{/if}
+<p>Admin: {data.isAdmin ? 'yes' : 'no'}</p>

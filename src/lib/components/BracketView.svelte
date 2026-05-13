@@ -22,7 +22,10 @@
     if (fromEnd === 0) return 'Final';
     if (fromEnd === 1) return 'Semifinals';
     if (fromEnd === 2) return 'Quarterfinals';
-    return `Round ${r}`;
+    // Round of N — N = number of players starting this round.
+    // fromEnd 3 → Round of 16, fromEnd 4 → Round of 32, etc.
+    const playersInRound = 2 ** (fromEnd + 1);
+    return `Round of ${playersInRound}`;
   };
 
   // BYE detection only applies to OLD tournaments (no round-0 prelim). New

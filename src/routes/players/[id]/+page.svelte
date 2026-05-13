@@ -1,7 +1,14 @@
 <script lang="ts">
   import { formatScores, parseScores } from '$lib/scores';
+  import Avatar from '$lib/components/Avatar.svelte';
   let { data } = $props();
   const pct = (n: number) => `${Math.round(n * 100)}%`;
+  const opp = (id: string | null) => {
+    if (!id) return null;
+    const opps = data.opponents as Record<string, string>;
+    const name = opps[id];
+    return name ? { id, name } : null;
+  };
 </script>
 
 {#if !data.player || !data.stats}
@@ -12,8 +19,13 @@
   </div>
 {:else}
   <section class="p-hero">
-    <span class="label">Player</span>
-    <h1 class="p-name">{data.player.name}</h1>
+    <div class="p-hero-row">
+      <Avatar player={data.player} size="xl" />
+      <div class="p-hero-text">
+        <span class="label">Player</span>
+        <h1 class="p-name">{data.player.name}</h1>
+      </div>
+    </div>
   </section>
 
   <div class="stats-grid">
@@ -81,8 +93,13 @@
         {#each Object.entries(data.stats.headToHead) as [oppId, h] (oppId)}
           {@const total = h.wins + h.losses}
           {@const winRate = total ? h.wins / total : 0}
-          <tr>
-            <td><a href="/players/{oppId}" class="player-cell">{data.opponents[oppId] ?? '?'}</a></td>
+          <tr class="clickable" onclick={() => window.location.assign(`/players/${oppId}`)}>
+            <td>
+              <span class="player-cell-wrap">
+                <Avatar player={opp(oppId)} size="sm" />
+                <a href="/players/{oppId}" class="player-cell" onclick={(e) => e.stopPropagation()}>{data.opponents[oppId] ?? '?'}</a>
+              </span>
+            </td>
             <td class="num">{h.wins}-{h.losses}</td>
             <td>
               {#if h.wins > h.losses}
@@ -115,18 +132,21 @@
         {@const isP1 = m.player1_id === data.player.id}
         {@const oppId = isP1 ? m.player2_id : m.player1_id}
         {@const won = m.winner_id === data.player.id}
-        <div class="history-card">
+        <a href="/players/{oppId}" class="history-card">
           <span class="pill" class:pill-win={won} class:pill-loss={!won}>
             {won ? 'Win' : 'Loss'}
           </span>
+          {#if oppId}
+            <Avatar player={opp(oppId)} size="md" />
+          {/if}
           <div class="history-main">
             <div class="history-vs">
-              vs <a href="/players/{oppId}" class="opp-link">{oppId ? (data.opponents[oppId] ?? '?') : '?'}</a>
+              vs <span class="opp-link">{oppId ? (data.opponents[oppId] ?? '?') : '?'}</span>
             </div>
             <div class="history-tournament">{m.tournament_name}</div>
           </div>
           <div class="history-score">{formatScores(parseScores(m.scores))}</div>
-        </div>
+        </a>
       {/each}
     </div>
   {/if}

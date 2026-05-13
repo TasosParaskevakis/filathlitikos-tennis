@@ -1,31 +1,53 @@
 <script lang="ts">
+  import Avatar from '$lib/components/Avatar.svelte';
+
   let { data } = $props();
   const pct = (n: number) => `${Math.round(n * 100)}%`;
 
-  // Podium qualifies if there are 3+ players, and at least one match has been completed.
-  const ranked = $derived(
-    data.rows.filter(r => r.stats.wins + r.stats.losses > 0)
-  );
+  let activeCategory = $state(data.categories[0] ?? '');
+
+  const rows = $derived(data.rowsByCategory[activeCategory] ?? []);
+  const ranked = $derived(rows.filter(r => r.stats.wins + r.stats.losses > 0));
   const showPodium = $derived(ranked.length >= 3);
   const podium = $derived(showPodium ? ranked.slice(0, 3) : []);
 </script>
 
 <section class="hero">
-  <h1 class="display">Leaderboard</h1>
+  <h1 class="display" style="font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 900; letter-spacing: -0.04em; line-height: 0.95; margin: 0 0 16px;">
+    Leaderboard
+  </h1>
   <p class="hero-subtitle">All-time player rankings.</p>
 </section>
 
-{#if data.rows.length === 0}
+{#if data.categories.length === 0}
   <div class="empty-state">
-    <span class="emoji">🏆</span>
+    <span class="emoji">🎾</span>
     <h3>No players yet</h3>
     <p>Once players are added and matches are played, the leaderboard will fill up here.</p>
   </div>
 {:else}
+  {#if data.categories.length > 1}
+    <div class="segmented" role="tablist" aria-label="Category">
+      {#each data.categories as cat (cat)}
+        <button
+          type="button"
+          role="tab"
+          aria-selected={cat === activeCategory}
+          class="segmented-item"
+          class:active={cat === activeCategory}
+          onclick={() => { activeCategory = cat; }}
+        >
+          {cat}
+          <span class="segmented-count">{data.rowsByCategory[cat].length}</span>
+        </button>
+      {/each}
+    </div>
+  {/if}
+
   {#if showPodium}
     <div class="podium">
-      <!-- 2nd place (left) -->
-      <a href="/players/{podium[1].id}" class="podium-card podium-2">
+      <a class="podium-card podium-2" href="/players/{podium[1].id}">
+        <Avatar player={podium[1]} size="lg" />
         <div class="podium-medal">🥈</div>
         <div class="podium-rank">2nd</div>
         <h2 class="podium-name">{podium[1].name}</h2>
@@ -35,8 +57,8 @@
           <span><strong>{pct(podium[1].stats.winPct)}</strong> win rate</span>
         </div>
       </a>
-      <!-- 1st place (center, biggest) -->
-      <a href="/players/{podium[0].id}" class="podium-card podium-1">
+      <a class="podium-card podium-1" href="/players/{podium[0].id}">
+        <Avatar player={podium[0]} size="xl" />
         <div class="podium-medal">🥇</div>
         <div class="podium-rank">Champion</div>
         <h2 class="podium-name">{podium[0].name}</h2>
@@ -46,8 +68,8 @@
           <span><strong>{pct(podium[0].stats.winPct)}</strong> win rate</span>
         </div>
       </a>
-      <!-- 3rd place (right) -->
-      <a href="/players/{podium[2].id}" class="podium-card podium-3">
+      <a class="podium-card podium-3" href="/players/{podium[2].id}">
+        <Avatar player={podium[2]} size="lg" />
         <div class="podium-medal">🥉</div>
         <div class="podium-rank">3rd</div>
         <h2 class="podium-name">{podium[2].name}</h2>
@@ -61,38 +83,52 @@
   {/if}
 
   <div class="section-header">
-    <span class="label">All players</span>
+    <span class="label">{activeCategory}</span>
     <h2>Rankings</h2>
   </div>
-  <table>
-    <thead>
-      <tr>
-        <th class="col-rank">#</th>
-        <th>Player</th>
-        <th>Titles</th>
-        <th>W-L</th>
-        <th class="col-winpct">Win %</th>
-        <th>Sets</th>
-        <th>Streak</th>
-      </tr>
-    </thead>
-    <tbody>
-      {#each data.rows as r, i (r.id)}
+
+  {#if rows.length === 0}
+    <div class="empty-state">
+      <span class="emoji">🎾</span>
+      <h3>No players in this category yet</h3>
+      <p>Once players are added and matches are played, the leaderboard will fill up here.</p>
+    </div>
+  {:else}
+    <table>
+      <thead>
         <tr>
-          <td class="num col-rank">{i + 1}</td>
-          <td><a href="/players/{r.id}" class="player-cell">{r.name}</a></td>
-          <td class="num">{r.stats.titles}</td>
-          <td class="num">{r.stats.wins}-{r.stats.losses}</td>
-          <td class="winpct-cell">
-            <div class="winpct-bar" style="width: {Math.round(r.stats.winPct * 100)}%"></div>
-            <span class="winpct-text">{pct(r.stats.winPct)}</span>
-          </td>
-          <td class="num">{r.stats.setsWon}-{r.stats.setsLost}</td>
-          <td class="num">{r.stats.currentStreak}</td>
+          <th class="col-rank">#</th>
+          <th>Player</th>
+          <th>Titles</th>
+          <th>W-L</th>
+          <th class="col-winpct">Win %</th>
+          <th>Sets</th>
+          <th>Streak</th>
         </tr>
-      {/each}
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        {#each rows as r, i (r.id)}
+          <tr class="clickable" onclick={() => window.location.assign(`/players/${r.id}`)}>
+            <td class="num col-rank">{i + 1}</td>
+            <td>
+              <span class="player-cell-wrap">
+                <Avatar player={r} size="sm" />
+                <a href="/players/{r.id}" class="player-cell" onclick={(e) => e.stopPropagation()}>{r.name}</a>
+              </span>
+            </td>
+            <td class="num">{r.stats.titles}</td>
+            <td class="num">{r.stats.wins}-{r.stats.losses}</td>
+            <td class="winpct-cell">
+              <div class="winpct-bar" style="width: {Math.round(r.stats.winPct * 100)}%"></div>
+              <span class="winpct-text">{pct(r.stats.winPct)}</span>
+            </td>
+            <td class="num">{r.stats.setsWon}-{r.stats.setsLost}</td>
+            <td class="num">{r.stats.currentStreak}</td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
+  {/if}
 {/if}
 
 <style>
@@ -103,7 +139,6 @@
     align-items: end;
     margin: 32px 0 48px;
   }
-
   .podium-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -112,62 +147,53 @@
     text-align: center;
     box-shadow: var(--shadow-sm);
     transition: all var(--dur) var(--ease);
-    color: var(--text);
-    text-decoration: none;
+    cursor: pointer;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 8px;
+    text-decoration: none;
+    color: var(--fg1);
   }
-
+  .podium-card :global(.avatar) { margin-bottom: 4px; }
   .podium-card:hover {
     transform: translateY(-4px);
     box-shadow: var(--shadow-lg);
-    color: var(--text);
+    color: var(--fg1);
   }
-
-  .podium-medal {
-    font-size: 2.5rem;
-    line-height: 1;
-  }
-
+  .podium-medal { font-size: 2.5rem; line-height: 1; }
   .podium-rank {
     font-size: 0.7rem;
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--text-tertiary);
+    color: var(--fg3);
     margin-bottom: 4px;
   }
-
   .podium-name {
     margin: 0;
     font-size: 1.3rem;
     font-weight: 800;
     letter-spacing: -0.025em;
   }
-
   .podium-stats {
     display: flex;
     gap: 8px;
     align-items: center;
-    color: var(--text-secondary);
+    color: var(--fg2);
     font-size: 0.88rem;
     flex-wrap: wrap;
     justify-content: center;
   }
   .podium-stats strong {
-    color: var(--text);
+    color: var(--fg1);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
   }
-  .podium-stats .dot { color: var(--text-tertiary); }
+  .podium-stats .dot { color: var(--fg3); }
 
-  /* 1st place — bigger, gold accent, lifted */
   .podium-1 {
-    background:
-      linear-gradient(160deg, rgba(245, 200, 66, 0.20) 0%, rgba(0, 57, 166, 0.10) 100%),
-      var(--surface);
+    background: linear-gradient(160deg, rgba(245, 200, 66, 0.20) 0%, rgba(0, 57, 166, 0.10) 100%), var(--surface);
     border: 2px solid var(--accent);
     box-shadow: var(--shadow-accent);
     padding: 36px 24px;
@@ -177,60 +203,15 @@
   .podium-1 .podium-medal { font-size: 3.2rem; }
   .podium-1 .podium-name { font-size: 1.6rem; }
   .podium-1 .podium-rank { color: var(--accent-soft-text); }
-
-  /* 2nd place — silver tint */
-  .podium-2 {
-    background:
-      linear-gradient(160deg, rgba(199, 199, 204, 0.22) 0%, rgba(199, 199, 204, 0.04) 100%),
-      var(--surface);
-  }
-
-  /* 3rd place — bronze tint */
-  .podium-3 {
-    background:
-      linear-gradient(160deg, rgba(205, 127, 50, 0.18) 0%, rgba(205, 127, 50, 0.03) 100%),
-      var(--surface);
-  }
-
-  .col-rank { width: 48px; color: var(--text-tertiary); }
-  .col-winpct { width: 180px; }
-
-  .player-cell {
-    font-weight: 600;
-    color: var(--text);
-  }
-  .player-cell:hover { color: var(--court); }
-
-  .winpct-cell {
-    position: relative;
-    font-variant-numeric: tabular-nums;
-    font-weight: 700;
-    overflow: hidden;
-  }
-  .winpct-bar {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, rgba(0, 57, 166, 0.20) 0%, rgba(0, 57, 166, 0.05) 100%);
-    z-index: 0;
-    transition: width var(--dur) var(--ease);
-  }
-  .winpct-text {
-    position: relative;
-    z-index: 1;
-  }
+  .podium-2 { background: linear-gradient(160deg, rgba(199, 199, 204, 0.22) 0%, rgba(199, 199, 204, 0.04) 100%), var(--surface); }
+  .podium-3 { background: linear-gradient(160deg, rgba(205, 127, 50, 0.18) 0%, rgba(205, 127, 50, 0.03) 100%), var(--surface); }
 
   @media (max-width: 768px) {
     .podium {
       grid-template-columns: 1fr;
-      gap: 12px;
+      align-items: stretch;
     }
     .podium-1 { transform: none; order: -1; }
     .podium-1:hover { transform: translateY(-4px); }
-    .col-winpct { width: auto; }
-    /* Hide some columns on narrow */
-    table th:nth-child(6),
-    table td:nth-child(6),
-    table th:nth-child(7),
-    table td:nth-child(7) { display: none; }
   }
 </style>

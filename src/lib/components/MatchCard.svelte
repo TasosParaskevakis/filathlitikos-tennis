@@ -1,6 +1,7 @@
 <script lang="ts">
   import { parseScores } from '$lib/scores';
   import type { Match } from '$lib/db';
+  import Avatar from './Avatar.svelte';
 
   type Props = {
     match: Match;
@@ -11,8 +12,10 @@
 
   let { match, playersById, isFinal = false, onClick }: Props = $props();
 
-  const p1 = $derived(match.player1_id ? playersById[match.player1_id]?.name ?? '?' : '—');
-  const p2 = $derived(match.player2_id ? playersById[match.player2_id]?.name ?? '?' : '—');
+  const p1 = $derived(match.player1_id ? playersById[match.player1_id] : null);
+  const p2 = $derived(match.player2_id ? playersById[match.player2_id] : null);
+  const p1Name = $derived(p1 ? p1.name : (match.player1_id ? '?' : '—'));
+  const p2Name = $derived(p2 ? p2.name : (match.player2_id ? '?' : '—'));
   const winnerSlot = $derived(
     match.winner_id === match.player1_id ? 1 :
     match.winner_id === match.player2_id ? 2 : null
@@ -38,8 +41,12 @@
     class:champion={winnerSlot === 1 && isFinal}
   >
     <span class="player-name">
-      {#if winnerSlot === 1}<span class="winner-dot"></span>{/if}
-      <span class="name-text">{p1}{winnerSlot === 1 && isFinal ? ' 🏆' : ''}</span>
+      {#if p1}
+        <Avatar player={p1} size="sm" />
+      {:else}
+        <span class="avatar-placeholder"></span>
+      {/if}
+      <span class="name-text">{p1Name}{winnerSlot === 1 && isFinal ? ' 🏆' : ''}</span>
     </span>
     <span class="scores">{p1SetScores}</span>
   </div>
@@ -50,8 +57,12 @@
     class:champion={winnerSlot === 2 && isFinal}
   >
     <span class="player-name">
-      {#if winnerSlot === 2}<span class="winner-dot"></span>{/if}
-      <span class="name-text">{p2}{winnerSlot === 2 && isFinal ? ' 🏆' : ''}</span>
+      {#if p2}
+        <Avatar player={p2} size="sm" />
+      {:else}
+        <span class="avatar-placeholder"></span>
+      {/if}
+      <span class="name-text">{p2Name}{winnerSlot === 2 && isFinal ? ' 🏆' : ''}</span>
     </span>
     <span class="scores">{p2SetScores}</span>
   </div>

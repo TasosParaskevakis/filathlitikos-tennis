@@ -1,5 +1,6 @@
 <script lang="ts">
   import BracketView from '$lib/components/BracketView.svelte';
+  import Avatar from '$lib/components/Avatar.svelte';
   let { data } = $props();
 
   const statusLabel = (s: string) =>
@@ -30,6 +31,7 @@
     <div class="card champion-banner">
       <div class="champion-banner-label">Champion</div>
       <div class="champion-banner-row">
+        <Avatar player={data.champion} size="xl" />
         <span class="big-trophy">🏆</span>
         <a href="/players/{data.champion.id}" class="champion-link">{data.champion.name}</a>
       </div>

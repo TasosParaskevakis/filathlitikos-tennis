@@ -247,9 +247,10 @@
   .podium-2 { background: linear-gradient(160deg, rgba(199, 199, 204, 0.22) 0%, rgba(199, 199, 204, 0.04) 100%), var(--surface); }
   .podium-3 { background: linear-gradient(160deg, rgba(205, 127, 50, 0.18) 0%, rgba(205, 127, 50, 0.03) 100%), var(--surface); }
 
-  /* Visibility helpers — hide-by-feature so we don't override the
-     element's natural display value (table for <table>, flex for .lb-cards). */
-  .hide-on-desktop { display: none; }
+  /* Visibility helpers — !important so they always win against per-element
+     display rules like `.lb-cards { display: flex }` regardless of cascade
+     order. Without this the cards leak through on desktop. */
+  .hide-on-desktop { display: none !important; }
   @media (max-width: 768px) {
     .hide-on-mobile  { display: none !important; }
     .hide-on-desktop { display: revert !important; }

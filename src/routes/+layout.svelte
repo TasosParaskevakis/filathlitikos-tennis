@@ -19,6 +19,7 @@
     </a>
     <nav>
       <a href="/" class:active={isActive('/')}>Tournaments</a>
+      <a href="/today" class:active={isActive('/today')}>Today</a>
       <a href="/players" class:active={isActive('/players')}>Leaderboard</a>
       <a href="/admin" class:active={isActive('/admin')}>Admin</a>
     </nav>

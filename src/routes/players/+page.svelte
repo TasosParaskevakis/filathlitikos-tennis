@@ -96,7 +96,8 @@
       <p>Once players are added and matches are played, the leaderboard will fill up here.</p>
     </div>
   {:else}
-    <table class="leaderboard-table">
+    <!-- Desktop / tablet: full table -->
+    <table class="leaderboard-table desktop-only">
       <thead>
         <tr>
           <th class="col-rank">#</th>
@@ -130,6 +131,34 @@
         {/each}
       </tbody>
     </table>
+
+    <!-- Mobile: card list (each row → single tappable card) -->
+    <div class="lb-cards mobile-only">
+      {#each rows as r, i (r.id)}
+        <a href="/players/{r.id}" class="lb-card">
+          <div class="lb-rank">#{i + 1}</div>
+          <Avatar player={r} size="md" />
+          <div class="lb-card-main">
+            <div class="lb-card-name">{r.name}</div>
+            <div class="lb-card-stats">
+              {#if r.stats.titles > 0}
+                <span><strong>{r.stats.titles}</strong> {r.stats.titles === 1 ? 'title' : 'titles'}</span>
+                <span class="dot">·</span>
+              {/if}
+              <span><strong>{pct(r.stats.winPct)}</strong> win rate</span>
+              {#if r.stats.currentStreak > 0}
+                <span class="dot">·</span>
+                <span>🔥 {r.stats.currentStreak}</span>
+              {/if}
+            </div>
+            <div class="lb-card-bar">
+              <div class="lb-card-bar-fill" style="width: {Math.round(r.stats.winPct * 100)}%"></div>
+            </div>
+          </div>
+          <div class="lb-card-wl">{r.stats.wins}–{r.stats.losses}</div>
+        </a>
+      {/each}
+    </div>
   {/if}
 {/if}
 
@@ -218,12 +247,96 @@
   .podium-2 { background: linear-gradient(160deg, rgba(199, 199, 204, 0.22) 0%, rgba(199, 199, 204, 0.04) 100%), var(--surface); }
   .podium-3 { background: linear-gradient(160deg, rgba(205, 127, 50, 0.18) 0%, rgba(205, 127, 50, 0.03) 100%), var(--surface); }
 
+  /* Mobile / desktop visibility helpers */
+  .desktop-only { display: table; }
+  .mobile-only { display: none; }
   @media (max-width: 768px) {
+    .desktop-only { display: none !important; }
+    .mobile-only  { display: block !important; }
+
     .podium {
       grid-template-columns: 1fr;
       align-items: stretch;
     }
     .podium-1 { transform: none; order: -1; }
     .podium-1:hover { transform: translateY(-4px); }
+  }
+
+  /* Mobile leaderboard cards */
+  .lb-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .lb-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    box-shadow: var(--shadow-sm);
+    transition: all var(--dur) var(--ease);
+    text-decoration: none;
+    color: var(--fg1);
+    display: grid;
+    grid-template-columns: 32px auto 1fr auto;
+    gap: 12px;
+    align-items: center;
+  }
+  .lb-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+    border-color: var(--border-strong);
+    color: var(--fg1);
+  }
+  .lb-rank {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--fg3);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .lb-card-main { min-width: 0; }
+  .lb-card-name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--fg1);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.25;
+  }
+  .lb-card-stats {
+    margin-top: 4px;
+    font-size: 0.82rem;
+    color: var(--fg2);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .lb-card-stats strong {
+    color: var(--fg1);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .lb-card-stats .dot { color: var(--fg3); }
+  .lb-card-bar {
+    margin-top: 8px;
+    height: 4px;
+    background: var(--bg-muted);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .lb-card-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent) 0%, rgba(0, 57, 166, 0.6) 100%);
+    transition: width var(--dur) var(--ease);
+  }
+  .lb-card-wl {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--fg1);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
   }
 </style>

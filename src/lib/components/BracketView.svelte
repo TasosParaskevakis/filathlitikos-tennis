@@ -38,6 +38,15 @@
       if (!prevPositions.has(2 * m.position)) set.add(`${m.id}:1`);
       if (!prevPositions.has(2 * m.position + 1)) set.add(`${m.id}:2`);
     }
+    // If BOTH slots in the same match got a bye, neither is really "advancing
+    // for free against an opponent" — they're just both having their first
+    // match here. Drop the BYE marker so the UI doesn't double-label it.
+    for (const m of matches) {
+      if (set.has(`${m.id}:1`) && set.has(`${m.id}:2`)) {
+        set.delete(`${m.id}:1`);
+        set.delete(`${m.id}:2`);
+      }
+    }
     return set;
   });
 </script>

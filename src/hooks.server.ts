@@ -1,18 +1,27 @@
 import type { Handle } from '@sveltejs/kit';
-import { getPlatformProxy } from 'wrangler';
 import { COOKIE_NAME, verifyCookie } from '$lib/auth';
 
-let cachedPlatform: Awaited<ReturnType<typeof getPlatformProxy>> | null = null;
-
+// Dev-only: pull bindings from wrangler.toml so vite dev gets a real platform.
+// Dynamic import + import.meta.env.DEV guard ensures wrangler/miniflare are
+// tree-shaken out of the production worker bundle.
+let cachedPlatform: { env: unknown; ctx: unknown; caches: unknown; cf: unknown } | null = null;
 async function devPlatform() {
-  if (!cachedPlatform) cachedPlatform = await getPlatformProxy();
+  if (!cachedPlatform) {
+    const { getPlatformProxy } = await import('wrangler');
+    cachedPlatform = await getPlatformProxy();
+  }
   return cachedPlatform;
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
   if (!event.platform && import.meta.env.DEV) {
     const p = await devPlatform();
-    event.platform = { env: p.env, context: p.ctx, caches: p.caches, cf: p.cf } as unknown as App.Platform;
+    event.platform = {
+      env: p.env,
+      context: p.ctx,
+      caches: p.caches,
+      cf: p.cf
+    } as unknown as App.Platform;
   }
 
   const secret = event.platform?.env.AUTH_SECRET ?? 'dev-secret-change-me';

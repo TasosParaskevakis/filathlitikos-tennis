@@ -1,12 +1,6 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
   let { data } = $props();
-  const labels: Record<string, string> = {
-    men_pro: 'Men · Pro',
-    men_new: 'Men · New',
-    women_pro: 'Women · Pro',
-    women_new: 'Women · New'
-  };
   const statusLabel = (s: string) =>
     s === 'in_progress' ? 'In progress' : s === 'completed' ? 'Completed' : 'Setup';
   const statusPillClass = (s: string) =>
@@ -34,12 +28,20 @@
       <div class="field-row">
         <div class="field">
           <label for="t-cat">Category</label>
-          <select id="t-cat" name="category" required>
-            <option value="men_pro">Men · Pro</option>
-            <option value="men_new">Men · New</option>
-            <option value="women_pro">Women · Pro</option>
-            <option value="women_new">Women · New</option>
-          </select>
+          <input
+            id="t-cat"
+            name="category"
+            list="existing-categories"
+            placeholder="e.g. Men Pro, Women New, Mixed Doubles"
+            autocomplete="off"
+            required
+          />
+          <datalist id="existing-categories">
+            {#each data.existingCategories as c (c)}
+              <option value={c}></option>
+            {/each}
+          </datalist>
+          <small class="field-hint">Type any name. Existing categories autocomplete.</small>
         </div>
         <div class="field">
           <label for="t-bo">Best of</label>
@@ -67,7 +69,7 @@
       <div class="card t-card">
         <a href="/admin/tournaments/{t.id}" class="t-card-body">
           <div class="t-card-top">
-            <span class="pill pill-category">{labels[t.category]}</span>
+            <span class="pill pill-category">{t.category}</span>
             <span class="pill {statusPillClass(t.status)}">{statusLabel(t.status)}</span>
           </div>
           <h3 class="t-card-title">{t.name}</h3>
@@ -134,6 +136,11 @@
   }
 
   .field { display: flex; flex-direction: column; }
+  .field-hint {
+    margin-top: 6px;
+    color: var(--text-tertiary);
+    font-size: 0.8rem;
+  }
   .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
   .grid {

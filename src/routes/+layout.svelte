@@ -14,8 +14,11 @@
 <header class="site-header">
   <div class="site-header-inner">
     <a href="/" class="brand">
-      <span class="brand-dot"></span>
-      Paraskevakis Tennis
+      <img src="/logo.svg" alt="" class="brand-logo" width="36" height="36" />
+      <span class="brand-text">
+        <span class="brand-name">ΦΙΛΑΘΛΗΤΙΚΟΣ</span>
+        <span class="brand-sub">Tennis Club</span>
+      </span>
     </a>
     <nav>
       <a href="/" class:active={isActive('/')}>Tournaments</a>

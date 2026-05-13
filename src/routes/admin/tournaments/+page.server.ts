@@ -1,23 +1,24 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { listTournaments, createTournament, deleteTournament, type TournamentCategory } from '$lib/db';
+import { listTournaments, createTournament, deleteTournament } from '$lib/db';
 
 export const load: PageServerLoad = async ({ platform }) => {
-  const tournaments = platform?.env.DB ? await listTournaments(platform.env.DB) : [];
-  return { tournaments };
+  if (!platform?.env.DB) return { tournaments: [], existingCategories: [] };
+  const tournaments = await listTournaments(platform.env.DB);
+  // Distinct categories from existing tournaments — fuels the autocomplete
+  const existingCategories = [...new Set(tournaments.map(t => t.category).filter(Boolean))].sort();
+  return { tournaments, existingCategories };
 };
-
-const CATEGORIES: TournamentCategory[] = ['men_pro', 'men_new', 'women_pro', 'women_new'];
 
 export const actions: Actions = {
   create: async ({ request, platform }) => {
     const data = await request.formData();
     const name = String(data.get('name') ?? '').trim();
-    const category = String(data.get('category') ?? '') as TournamentCategory;
+    const category = String(data.get('category') ?? '').trim();
     const best_of = Number(data.get('best_of') ?? 3);
-    if (!name) return fail(400, { error: 'Name required' });
-    if (!CATEGORIES.includes(category)) return fail(400, { error: 'Invalid category' });
-    if (![1, 3, 5].includes(best_of)) return fail(400, { error: 'best_of must be 1, 3, or 5' });
+    if (!name) return fail(400, { error: 'Tournament name required' });
+    if (!category) return fail(400, { error: 'Category required' });
+    if (![1, 3, 5].includes(best_of)) return fail(400, { error: 'Best of must be 1, 3, or 5' });
     const t = await createTournament(platform!.env.DB, name, category, best_of);
     redirect(303, `/admin/tournaments/${t.id}`);
   },

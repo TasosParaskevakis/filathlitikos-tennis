@@ -29,11 +29,6 @@
     return playersById[id]?.name ?? '?';
   }
 
-  const labels: Record<string, string> = {
-    men_pro: 'Men · Pro', men_new: 'Men · New',
-    women_pro: 'Women · Pro', women_new: 'Women · New'
-  };
-
   const statusLabel = (s: string) =>
     s === 'in_progress' ? 'In progress' : s === 'completed' ? 'Completed' : 'Setup';
   const statusPillClass = (s: string) =>
@@ -54,7 +49,7 @@
 {:else}
   <section class="t-hero">
     <div class="t-hero-top">
-      <span class="pill pill-category">{labels[data.tournament.category]}</span>
+      <span class="pill pill-category">{data.tournament.category}</span>
       <span class="pill {statusPillClass(data.tournament.status)}">{statusLabel(data.tournament.status)}</span>
     </div>
     <h1 class="t-title">{data.tournament.name}</h1>

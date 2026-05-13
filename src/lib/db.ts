@@ -4,7 +4,7 @@ export type Player = {
   created_at: number;
 };
 
-export type TournamentCategory = 'men_pro' | 'men_new' | 'women_pro' | 'women_new';
+export type TournamentCategory = string;
 export type TournamentStatus = 'setup' | 'in_progress' | 'completed';
 
 export type Tournament = {

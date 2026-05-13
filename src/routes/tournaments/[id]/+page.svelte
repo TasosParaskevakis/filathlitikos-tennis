@@ -1,10 +1,6 @@
 <script lang="ts">
   import BracketView from '$lib/components/BracketView.svelte';
   let { data } = $props();
-  const labels: Record<string, string> = {
-    men_pro: 'Men · Pro', men_new: 'Men · New',
-    women_pro: 'Women · Pro', women_new: 'Women · New'
-  };
 
   const statusLabel = (s: string) =>
     s === 'in_progress' ? 'In progress' : s === 'completed' ? 'Completed' : 'Setup';
@@ -23,7 +19,7 @@
 {:else}
   <section class="t-hero">
     <div class="t-hero-top">
-      <span class="pill pill-category">{labels[data.tournament.category]}</span>
+      <span class="pill pill-category">{data.tournament.category}</span>
       <span class="pill {statusPillClass(data.tournament.status)}">{statusLabel(data.tournament.status)}</span>
     </div>
     <h1 class="t-title">{data.tournament.name}</h1>
@@ -82,7 +78,7 @@
 
   .champion-banner {
     background:
-      linear-gradient(135deg, rgba(245, 200, 66, 0.22) 0%, rgba(182, 227, 0, 0.10) 100%),
+      linear-gradient(135deg, rgba(245, 200, 66, 0.22) 0%, rgba(0, 57, 166, 0.10) 100%),
       var(--surface);
     border: none;
     box-shadow: var(--shadow);

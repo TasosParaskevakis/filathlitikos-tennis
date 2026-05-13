@@ -166,7 +166,7 @@
   /* 1st place — bigger, gold accent, lifted */
   .podium-1 {
     background:
-      linear-gradient(160deg, rgba(245, 200, 66, 0.20) 0%, rgba(182, 227, 0, 0.10) 100%),
+      linear-gradient(160deg, rgba(245, 200, 66, 0.20) 0%, rgba(0, 57, 166, 0.10) 100%),
       var(--surface);
     border: 2px solid var(--accent);
     box-shadow: var(--shadow-accent);
@@ -210,7 +210,7 @@
   .winpct-bar {
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, rgba(182, 227, 0, 0.20) 0%, rgba(182, 227, 0, 0.05) 100%);
+    background: linear-gradient(90deg, rgba(0, 57, 166, 0.20) 0%, rgba(0, 57, 166, 0.05) 100%);
     z-index: 0;
     transition: width var(--dur) var(--ease);
   }

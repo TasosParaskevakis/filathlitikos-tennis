@@ -1,11 +1,5 @@
 <script lang="ts">
   let { data } = $props();
-  const labels: Record<string, string> = {
-    men_pro: 'Men · Pro',
-    men_new: 'Men · New',
-    women_pro: 'Women · Pro',
-    women_new: 'Women · New'
-  };
 
   const roundLabel = (current: number, total: number) => {
     if (!total) return 'In progress';
@@ -22,7 +16,7 @@
 </script>
 
 <section class="hero">
-  <h1 class="display">Paraskevakis Tennis</h1>
+  <h1 class="display">Φιλαθλητικός Tennis</h1>
   <p class="hero-subtitle">Tournaments, brackets, and stats for the club.</p>
 </section>
 
@@ -43,7 +37,7 @@
     {#each data.inProgress as t (t.id)}
       <a href="/tournaments/{t.id}" class="card t-card">
         <div class="t-card-top">
-          <span class="pill pill-category">{labels[t.category]}</span>
+          <span class="pill pill-category">{t.category}</span>
           <span class="pill pill-status-progress">In progress</span>
         </div>
         <h3 class="t-card-title">{t.name}</h3>
@@ -66,7 +60,7 @@
     {#each data.completed as t (t.id)}
       <a href="/tournaments/{t.id}" class="card t-card">
         <div class="t-card-top">
-          <span class="pill pill-category">{labels[t.category]}</span>
+          <span class="pill pill-category">{t.category}</span>
           <span class="pill pill-status-completed">Completed</span>
         </div>
         <h3 class="t-card-title">{t.name}</h3>
@@ -95,7 +89,7 @@
     {#each data.upcoming as t (t.id)}
       <div class="card t-card">
         <div class="t-card-top">
-          <span class="pill pill-category">{labels[t.category]}</span>
+          <span class="pill pill-category">{t.category}</span>
           <span class="pill pill-status-upcoming">Upcoming</span>
         </div>
         <h3 class="t-card-title">{t.name}</h3>

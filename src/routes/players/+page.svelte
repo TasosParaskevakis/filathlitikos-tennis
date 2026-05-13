@@ -8,8 +8,8 @@
 
   const rows = $derived(data.rowsByCategory[activeCategory] ?? []);
   const ranked = $derived(rows.filter(r => r.stats.wins + r.stats.losses > 0));
-  const showPodium = $derived(ranked.length >= 3);
-  const podium = $derived(showPodium ? ranked.slice(0, 3) : []);
+  const showPodium = $derived(ranked.length >= 1);
+  const podium = $derived(ranked.slice(0, 3));
 </script>
 
 <section class="hero">
@@ -26,37 +26,37 @@
     <p>Once players are added and matches are played, the leaderboard will fill up here.</p>
   </div>
 {:else}
-  {#if data.categories.length > 1}
-    <div class="segmented" role="tablist" aria-label="Category">
-      {#each data.categories as cat (cat)}
-        <button
-          type="button"
-          role="tab"
-          aria-selected={cat === activeCategory}
-          class="segmented-item"
-          class:active={cat === activeCategory}
-          onclick={() => { activeCategory = cat; }}
-        >
-          {cat}
-          <span class="segmented-count">{data.rowsByCategory[cat].length}</span>
-        </button>
-      {/each}
-    </div>
-  {/if}
+  <div class="segmented" role="tablist" aria-label="Category">
+    {#each data.categories as cat (cat)}
+      <button
+        type="button"
+        role="tab"
+        aria-selected={cat === activeCategory}
+        class="segmented-item"
+        class:active={cat === activeCategory}
+        onclick={() => { activeCategory = cat; }}
+      >
+        {cat}
+        <span class="segmented-count">{data.rowsByCategory[cat].length}</span>
+      </button>
+    {/each}
+  </div>
 
   {#if showPodium}
-    <div class="podium">
-      <a class="podium-card podium-2" href="/players/{podium[1].id}">
-        <Avatar player={podium[1]} size="lg" />
-        <div class="podium-medal">🥈</div>
-        <div class="podium-rank">2nd</div>
-        <h2 class="podium-name">{podium[1].name}</h2>
-        <div class="podium-stats">
-          <span><strong>{podium[1].stats.titles}</strong> titles</span>
-          <span class="dot">·</span>
-          <span><strong>{pct(podium[1].stats.winPct)}</strong> win rate</span>
-        </div>
-      </a>
+    <div class="podium" class:podium-narrow={podium.length < 3}>
+      {#if podium.length >= 2}
+        <a class="podium-card podium-2" href="/players/{podium[1].id}">
+          <Avatar player={podium[1]} size="lg" />
+          <div class="podium-medal">🥈</div>
+          <div class="podium-rank">2nd</div>
+          <h2 class="podium-name">{podium[1].name}</h2>
+          <div class="podium-stats">
+            <span><strong>{podium[1].stats.titles}</strong> titles</span>
+            <span class="dot">·</span>
+            <span><strong>{pct(podium[1].stats.winPct)}</strong> win rate</span>
+          </div>
+        </a>
+      {/if}
       <a class="podium-card podium-1" href="/players/{podium[0].id}">
         <Avatar player={podium[0]} size="xl" />
         <div class="podium-medal">🥇</div>
@@ -68,17 +68,19 @@
           <span><strong>{pct(podium[0].stats.winPct)}</strong> win rate</span>
         </div>
       </a>
-      <a class="podium-card podium-3" href="/players/{podium[2].id}">
-        <Avatar player={podium[2]} size="lg" />
-        <div class="podium-medal">🥉</div>
-        <div class="podium-rank">3rd</div>
-        <h2 class="podium-name">{podium[2].name}</h2>
-        <div class="podium-stats">
-          <span><strong>{podium[2].stats.titles}</strong> titles</span>
-          <span class="dot">·</span>
-          <span><strong>{pct(podium[2].stats.winPct)}</strong> win rate</span>
-        </div>
-      </a>
+      {#if podium.length >= 3}
+        <a class="podium-card podium-3" href="/players/{podium[2].id}">
+          <Avatar player={podium[2]} size="lg" />
+          <div class="podium-medal">🥉</div>
+          <div class="podium-rank">3rd</div>
+          <h2 class="podium-name">{podium[2].name}</h2>
+          <div class="podium-stats">
+            <span><strong>{podium[2].stats.titles}</strong> titles</span>
+            <span class="dot">·</span>
+            <span><strong>{pct(podium[2].stats.winPct)}</strong> win rate</span>
+          </div>
+        </a>
+      {/if}
     </div>
   {/if}
 
@@ -138,6 +140,16 @@
     gap: 16px;
     align-items: end;
     margin: 32px 0 48px;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .podium.podium-narrow {
+    grid-template-columns: minmax(280px, 480px);
+    justify-content: center;
+  }
+  .podium.podium-narrow:has(.podium-2) {
+    grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.15fr);
   }
   .podium-card {
     background: var(--surface);

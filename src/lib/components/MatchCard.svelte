@@ -7,10 +7,15 @@
     match: Match;
     playersById: Record<string, { id: string; name: string }>;
     isFinal?: boolean;
+    byeSlot1?: boolean;
+    byeSlot2?: boolean;
     onClick?: () => void;
   };
 
-  let { match, playersById, isFinal = false, onClick }: Props = $props();
+  let {
+    match, playersById, isFinal = false,
+    byeSlot1 = false, byeSlot2 = false, onClick
+  }: Props = $props();
 
   const p1 = $derived(match.player1_id ? playersById[match.player1_id] : null);
   const p2 = $derived(match.player2_id ? playersById[match.player2_id] : null);
@@ -47,6 +52,7 @@
         <span class="avatar-placeholder"></span>
       {/if}
       <span class="name-text">{p1Name}{winnerSlot === 1 && isFinal ? ' 🏆' : ''}</span>
+      {#if byeSlot1 && p1}<span class="bye-tag" title="Πέρασε απευθείας — δεν έπαιξε προηγούμενο γύρο">BYE</span>{/if}
     </span>
     <span class="scores">{p1SetScores}</span>
   </div>
@@ -63,7 +69,24 @@
         <span class="avatar-placeholder"></span>
       {/if}
       <span class="name-text">{p2Name}{winnerSlot === 2 && isFinal ? ' 🏆' : ''}</span>
+      {#if byeSlot2 && p2}<span class="bye-tag" title="Πέρασε απευθείας — δεν έπαιξε προηγούμενο γύρο">BYE</span>{/if}
     </span>
     <span class="scores">{p2SetScores}</span>
   </div>
 </div>
+
+<style>
+  .bye-tag {
+    display: inline-block;
+    padding: 2px 7px;
+    margin-left: 6px;
+    background: var(--accent-soft);
+    color: var(--accent-soft-text);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    border-radius: 9999px;
+    line-height: 1.2;
+    flex-shrink: 0;
+  }
+</style>

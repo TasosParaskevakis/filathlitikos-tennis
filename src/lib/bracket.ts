@@ -21,12 +21,29 @@ export type NextSlot = {
   slot: 'player1' | 'player2';
 };
 
+/** Smallest power of 2 ≥ n (used to be the bracket size). */
 export function nextPowerOf2(n: number): number {
   if (n <= 1) return 1;
   return 2 ** Math.ceil(Math.log2(n));
 }
 
+/** Largest power of 2 ≤ n (the main-bracket size when N isn't a power of 2). */
+export function largestPow2LE(n: number): number {
+  if (n < 2) return 1;
+  return 2 ** Math.floor(Math.log2(n));
+}
+
+/**
+ * Where does the winner of (round, position) advance to?
+ *  - Round 0 (preliminary) → round 1 match at the same position, slot player2.
+ *    The corresponding R1 player1 was a direct entrant.
+ *  - Round R ≥ 1 → standard binary-tree advancement: next round, position
+ *    floor(p/2), slot player1 if p is even, else player2.
+ */
 export function nextMatchPosition(round: number, position: number): NextSlot {
+  if (round === 0) {
+    return { round: 1, position, slot: 'player2' };
+  }
   return {
     round: round + 1,
     position: Math.floor(position / 2),
@@ -43,6 +60,20 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+/**
+ * Generate a single-elimination bracket. When N is not a power of 2, an
+ * automatic "preliminary round" (round 0) trims the field down to the next
+ * lower power of 2 — every player still plays at least one match, no BYE
+ * passes anywhere.
+ *
+ * Layout for non-power-of-2 N:
+ *  - mainSize = largest power of 2 ≤ N
+ *  - excess   = N - mainSize  (must be eliminated via prelim)
+ *  - prelim has `excess` matches; `direct = N - 2*excess` players skip prelim
+ *  - R1 has mainSize/2 matches: first `excess` of them are direct-vs-prelim-winner;
+ *    the rest are direct-vs-direct.
+ *  - R2..final: empty match shells, populated as winners propagate.
+ */
 export function generateMatches(playerIds: string[]): GenerationResult {
   if (playerIds.length < 2) {
     throw new Error('Need at least 2 players to generate a bracket');
@@ -55,68 +86,57 @@ export function generateMatches(playerIds: string[]): GenerationResult {
   }));
 
   const n = shuffled.length;
-  const pow2 = nextPowerOf2(n);
-  const byes = pow2 - n;
+  const mainSize = largestPow2LE(n);
+  const excess = n - mainSize;          // players to eliminate in prelim
+  const directCount = n - 2 * excess;   // players who skip prelim
 
-  // Special case: 2 players → single match, no later rounds
-  if (pow2 === 2) {
-    return {
-      matches: [{ round: 1, position: 0, player1_id: shuffled[0], player2_id: shuffled[1] }],
-      seeds
-    };
+  const matches: GeneratedMatch[] = [];
+
+  // ── Round 0 (preliminary) ─────────────────────────────────────────
+  // The "extra" players paired up to fight for `excess` open R1 slots.
+  for (let i = 0; i < excess; i++) {
+    matches.push({
+      round: 0,
+      position: i,
+      player1_id: shuffled[directCount + 2 * i],
+      player2_id: shuffled[directCount + 2 * i + 1]
+    });
   }
 
-  // Build empty rounds 2..final
-  const matches: GeneratedMatch[] = [];
-  let roundSize = pow2 / 4;
+  // ── Round 1 ──────────────────────────────────────────────────────
+  // mainSize/2 matches. First `excess` of them: direct vs (prelim-winner-pending).
+  // Remaining: direct vs direct.
+  // For mainSize=2 there's a single R1 match (which is the final too).
+  const r1Count = Math.max(1, mainSize / 2);
+  let directIdx = 0;
+  for (let i = 0; i < r1Count; i++) {
+    if (i < excess) {
+      matches.push({
+        round: 1,
+        position: i,
+        player1_id: shuffled[directIdx++],
+        player2_id: null // filled when prelim match `i` completes
+      });
+    } else {
+      matches.push({
+        round: 1,
+        position: i,
+        player1_id: shuffled[directIdx++] ?? null,
+        player2_id: shuffled[directIdx++] ?? null
+      });
+    }
+  }
+
+  // ── Rounds 2..final ──────────────────────────────────────────────
+  // Empty shells; populated as winners advance.
+  let roundSize = Math.floor(mainSize / 4);
   let round = 2;
   while (roundSize >= 1) {
     for (let pos = 0; pos < roundSize; pos++) {
       matches.push({ round, position: pos, player1_id: null, player2_id: null });
     }
-    roundSize /= 2;
+    roundSize = Math.floor(roundSize / 2);
     round++;
-  }
-
-  // Place bye players directly into round-2 slots, spread evenly:
-  //   First pass: fill player1 of each r2 match in order (one bye per match).
-  //   Second pass: if byes remain, fill player2 of each r2 match in order.
-  // This matches standard bracket convention — byes only meet other byes when forced
-  // (i.e., when byes > number of r2 matches).
-  const r2Matches = matches.filter(m => m.round === 2);
-  const slotsNeedingR1Feeder: { r2Pos: number; slot: 'player1_id' | 'player2_id' }[] = [];
-  let byeIdx = 0;
-  for (let p = 0; p < r2Matches.length; p++) {
-    if (byeIdx < byes) {
-      r2Matches[p].player1_id = shuffled[byeIdx++];
-    } else {
-      slotsNeedingR1Feeder.push({ r2Pos: p, slot: 'player1_id' });
-    }
-  }
-  for (let p = 0; p < r2Matches.length; p++) {
-    if (byeIdx < byes) {
-      r2Matches[p].player2_id = shuffled[byeIdx++];
-    } else {
-      slotsNeedingR1Feeder.push({ r2Pos: p, slot: 'player2_id' });
-    }
-  }
-
-  // Each remaining r2 slot needs an r1 winner. Compute the r1 match position that
-  // feeds it: r1 pos 2*r2Pos feeds player1, r1 pos 2*r2Pos+1 feeds player2.
-  const r1Positions = slotsNeedingR1Feeder
-    .map(({ r2Pos, slot }) => 2 * r2Pos + (slot === 'player2_id' ? 1 : 0))
-    .sort((a, b) => a - b);
-
-  // Pair the play players (those without byes) into r1 matches in r1-position order.
-  const playPlayers = shuffled.slice(byes);
-  let pi = 0;
-  for (const r1Pos of r1Positions) {
-    matches.push({
-      round: 1,
-      position: r1Pos,
-      player1_id: playPlayers[pi++] ?? null,
-      player2_id: playPlayers[pi++] ?? null
-    });
   }
 
   return { matches, seeds };

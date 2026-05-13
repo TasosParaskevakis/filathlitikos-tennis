@@ -14,7 +14,10 @@
     [...new Set(matches.map(m => m.round))].sort((a, b) => a - b)
   );
   const maxRound = $derived(rounds.length ? Math.max(...rounds) : 0);
+  const hasPrelim = $derived(matches.some(m => m.round === 0));
+
   const labelFor = (r: number, max: number) => {
+    if (r === 0) return 'Preliminary';
     const fromEnd = max - r;
     if (fromEnd === 0) return 'Final';
     if (fromEnd === 1) return 'Semifinals';
@@ -22,11 +25,13 @@
     return `Round ${r}`;
   };
 
-  // A player slot in round 2+ is a "bye" slot when the previous round
-  // doesn't have the match that would have fed it. (Each round-N match at
-  // position p is fed by round-(N-1) matches at positions 2p and 2p+1.)
+  // BYE detection only applies to OLD tournaments (no round-0 prelim). New
+  // tournaments use a preliminary round so every player plays — there's no
+  // such thing as a bye and the BYE label never appears.
   const byeSlots = $derived.by(() => {
-    const set = new Set<string>(); // `${matchId}:1` or `${matchId}:2`
+    const set = new Set<string>();
+    if (hasPrelim) return set; // new-style tournament: no byes possible
+
     const positionsByRound = new Map<number, Set<number>>();
     for (const m of matches) {
       if (!positionsByRound.has(m.round)) positionsByRound.set(m.round, new Set());
@@ -39,8 +44,7 @@
       if (!prevPositions.has(2 * m.position + 1)) set.add(`${m.id}:2`);
     }
     // If BOTH slots in the same match got a bye, neither is really "advancing
-    // for free against an opponent" — they're just both having their first
-    // match here. Drop the BYE marker so the UI doesn't double-label it.
+    // for free against an opponent" — drop the marker.
     for (const m of matches) {
       if (set.has(`${m.id}:1`) && set.has(`${m.id}:2`)) {
         set.delete(`${m.id}:1`);

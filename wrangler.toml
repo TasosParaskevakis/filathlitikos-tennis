@@ -1,8 +1,9 @@
-name = "tennis-tournament"
+name = "filathlitikos-tennis"
 compatibility_date = "2024-09-23"
 pages_build_output_dir = ".svelte-kit/cloudflare"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "tennis-tournament-db"
-database_id = "local-placeholder-replace-at-deployment"
+database_name = "tennis-tournament-db-prod"
+database_id = "ae512dc1-2344-48d3-ab5e-db940186f11e"
+preview_database_id = "ae512dc1-2344-48d3-ab5e-db940186f11e"

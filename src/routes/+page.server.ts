@@ -1,7 +1,11 @@
 import type { PageServerLoad } from './$types';
+import { listTournaments } from '$lib/db';
 
-export const load: PageServerLoad = async ({ platform, locals }) => {
-  if (!platform?.env.DB) return { count: -1, isAdmin: locals.isAdmin };
-  const r = await platform.env.DB.prepare('SELECT COUNT(*) as c FROM players').first<{ c: number }>();
-  return { count: r?.c ?? 0, isAdmin: locals.isAdmin };
+export const load: PageServerLoad = async ({ platform }) => {
+  const all = platform?.env.DB ? await listTournaments(platform.env.DB) : [];
+  return {
+    inProgress: all.filter(t => t.status === 'in_progress'),
+    completed: all.filter(t => t.status === 'completed'),
+    upcoming: all.filter(t => t.status === 'setup')
+  };
 };

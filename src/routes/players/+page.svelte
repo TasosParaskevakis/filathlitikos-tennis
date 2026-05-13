@@ -96,7 +96,7 @@
       <p>Once players are added and matches are played, the leaderboard will fill up here.</p>
     </div>
   {:else}
-    <table>
+    <table class="leaderboard-table">
       <thead>
         <tr>
           <th class="col-rank">#</th>
@@ -104,8 +104,8 @@
           <th>Titles</th>
           <th>W-L</th>
           <th class="col-winpct">Win %</th>
-          <th>Sets</th>
-          <th>Streak</th>
+          <th class="col-sets">Sets</th>
+          <th class="col-streak">Streak</th>
         </tr>
       </thead>
       <tbody>
@@ -124,8 +124,8 @@
               <div class="winpct-bar" style="width: {Math.round(r.stats.winPct * 100)}%"></div>
               <span class="winpct-text">{pct(r.stats.winPct)}</span>
             </td>
-            <td class="num">{r.stats.setsWon}-{r.stats.setsLost}</td>
-            <td class="num">{r.stats.currentStreak}</td>
+            <td class="num col-sets">{r.stats.setsWon}-{r.stats.setsLost}</td>
+            <td class="num col-streak">{r.stats.currentStreak}</td>
           </tr>
         {/each}
       </tbody>

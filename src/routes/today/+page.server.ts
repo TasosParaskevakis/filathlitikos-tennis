@@ -8,7 +8,7 @@ function todayInAthens(): string {
   }).format(new Date());
 }
 
-export const load: PageServerLoad = async ({ url, platform }) => {
+export const load: PageServerLoad = async ({ url, platform, locals }) => {
   const today = todayInAthens();
   const requested = url.searchParams.get('date') || today;
   const date = /^\d{4}-\d{2}-\d{2}$/.test(requested) ? requested : today;
@@ -16,5 +16,5 @@ export const load: PageServerLoad = async ({ url, platform }) => {
   const db = platform?.env.DB;
   const matches: DayMatch[] = db ? await listMatchesByDate(db, date) : [];
 
-  return { date, today, matches };
+  return { date, today, matches, isAdmin: locals.isAdmin };
 };

@@ -1,7 +1,12 @@
 <script lang="ts">
+  import { invalidateAll } from '$app/navigation';
   import BracketView from '$lib/components/BracketView.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
+  import MatchEditModal from '$lib/components/MatchEditModal.svelte';
+  import type { Match } from '$lib/db';
   let { data } = $props();
+
+  let editing = $state<Match | null>(null);
 
   const statusLabel = (s: string) =>
     s === 'in_progress' ? 'In progress' : s === 'completed' ? 'Completed' : 'Setup';
@@ -9,6 +14,12 @@
   const statusPillClass = (s: string) =>
     s === 'in_progress' ? 'pill-status-progress' :
     s === 'completed' ? 'pill-status-completed' : 'pill-status-upcoming';
+
+  function pName(id: string | null) {
+    if (!id) return '—';
+    const players = data.playersById as Record<string, { id: string; name: string }>;
+    return players[id]?.name ?? '?';
+  }
 </script>
 
 {#if !data.tournament}
@@ -39,8 +50,15 @@
   {/if}
 
   {#if data.matches.length}
+    {#if data.isAdmin}
+      <p class="admin-edit-hint">✏️ Click any match to enter scores.</p>
+    {/if}
     <div class="bracket-wrap">
-      <BracketView matches={data.matches} playersById={data.playersById} />
+      <BracketView
+        matches={data.matches}
+        playersById={data.playersById}
+        onMatchClick={data.isAdmin ? (m) => { editing = m; } : undefined}
+      />
     </div>
   {:else}
     <div class="empty-state">
@@ -48,6 +66,17 @@
       <h3>Bracket not generated yet</h3>
       <p>The bracket will appear here once the tournament begins.</p>
     </div>
+  {/if}
+
+  {#if editing}
+    <MatchEditModal
+      match={editing}
+      bestOf={data.tournament.best_of}
+      p1Name={pName(editing.player1_id)}
+      p2Name={pName(editing.player2_id)}
+      onClose={() => { editing = null; }}
+      onSaved={() => { editing = null; invalidateAll(); }}
+    />
   {/if}
 {/if}
 
@@ -123,7 +152,18 @@
   }
 
   .bracket-wrap {
-    margin-top: 32px;
+    margin-top: 12px;
+  }
+
+  .admin-edit-hint {
+    display: inline-block;
+    margin: 0 0 16px;
+    font-size: 0.88rem;
+    color: var(--accent-soft-text);
+    background: var(--accent-soft);
+    padding: 8px 14px;
+    border-radius: var(--radius-pill);
+    font-weight: 600;
   }
 
   @media (max-width: 768px) {

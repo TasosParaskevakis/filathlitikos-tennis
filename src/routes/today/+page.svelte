@@ -1,9 +1,12 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
+  import { goto, invalidateAll } from '$app/navigation';
   import Avatar from '$lib/components/Avatar.svelte';
+  import MatchEditModal from '$lib/components/MatchEditModal.svelte';
   import { parseScores, formatScores } from '$lib/scores';
+  import type { DayMatch } from '$lib/db';
 
   let { data } = $props();
+  let editing = $state<DayMatch | null>(null);
 
   function setDate(d: string) {
     goto(`/today?date=${d}`, { keepFocus: false });
@@ -52,6 +55,10 @@
   {/if}
 </div>
 
+{#if data.isAdmin && data.matches.length}
+  <p class="admin-edit-hint">✏️ Click any match to enter scores.</p>
+{/if}
+
 {#if data.matches.length === 0}
   <div class="empty-state">
     <span class="emoji">🗓️</span>
@@ -64,31 +71,68 @@
       {@const p1 = m.player1_id ? { id: m.player1_id, name: m.player1_name ?? '?' } : null}
       {@const p2 = m.player2_id ? { id: m.player2_id, name: m.player2_name ?? '?' } : null}
       {@const scores = parseScores(m.scores)}
-      <a href="/tournaments/{m.tournament_id}" class="day-card">
-        <div class="day-card-top">
-          <span class="pill pill-category">{m.tournament_category}</span>
-          <span class="pill" class:pill-status-completed={m.status === 'completed'} class:pill-status-progress={m.status === 'pending'}>
-            {m.status === 'completed' ? 'Final' : 'Upcoming'}
-          </span>
-        </div>
-        <div class="day-card-tournament">{m.tournament_name} · Best of {m.tournament_best_of}</div>
-        <div class="day-card-players">
-          <div class="day-player" class:winner={m.winner_id === p1?.id}>
-            {#if p1}<Avatar player={p1} size="md" />{:else}<span class="avatar-placeholder"></span>{/if}
-            <span class="day-player-name">{nameFor(m.player1_id, m.player1_name)}</span>
+      {#if data.isAdmin}
+        <button type="button" class="day-card" onclick={() => { editing = m; }}>
+          <div class="day-card-top">
+            <span class="pill pill-category">{m.tournament_category}</span>
+            <span class="pill" class:pill-status-completed={m.status === 'completed'} class:pill-status-progress={m.status === 'pending'}>
+              {m.status === 'completed' ? 'Final' : 'Upcoming'}
+            </span>
           </div>
-          <div class="day-vs">vs</div>
-          <div class="day-player" class:winner={m.winner_id === p2?.id}>
-            {#if p2}<Avatar player={p2} size="md" />{:else}<span class="avatar-placeholder"></span>{/if}
-            <span class="day-player-name">{nameFor(m.player2_id, m.player2_name)}</span>
+          <div class="day-card-tournament">{m.tournament_name} · Best of {m.tournament_best_of}</div>
+          <div class="day-card-players">
+            <div class="day-player" class:winner={m.winner_id === p1?.id}>
+              {#if p1}<Avatar player={p1} size="md" />{:else}<span class="avatar-placeholder"></span>{/if}
+              <span class="day-player-name">{nameFor(m.player1_id, m.player1_name)}</span>
+            </div>
+            <div class="day-vs">vs</div>
+            <div class="day-player" class:winner={m.winner_id === p2?.id}>
+              {#if p2}<Avatar player={p2} size="md" />{:else}<span class="avatar-placeholder"></span>{/if}
+              <span class="day-player-name">{nameFor(m.player2_id, m.player2_name)}</span>
+            </div>
           </div>
-        </div>
-        {#if scores.length}
-          <div class="day-card-score">{formatScores(scores)}</div>
-        {/if}
-      </a>
+          {#if scores.length}
+            <div class="day-card-score">{formatScores(scores)}</div>
+          {/if}
+        </button>
+      {:else}
+        <a href="/tournaments/{m.tournament_id}" class="day-card">
+          <div class="day-card-top">
+            <span class="pill pill-category">{m.tournament_category}</span>
+            <span class="pill" class:pill-status-completed={m.status === 'completed'} class:pill-status-progress={m.status === 'pending'}>
+              {m.status === 'completed' ? 'Final' : 'Upcoming'}
+            </span>
+          </div>
+          <div class="day-card-tournament">{m.tournament_name} · Best of {m.tournament_best_of}</div>
+          <div class="day-card-players">
+            <div class="day-player" class:winner={m.winner_id === p1?.id}>
+              {#if p1}<Avatar player={p1} size="md" />{:else}<span class="avatar-placeholder"></span>{/if}
+              <span class="day-player-name">{nameFor(m.player1_id, m.player1_name)}</span>
+            </div>
+            <div class="day-vs">vs</div>
+            <div class="day-player" class:winner={m.winner_id === p2?.id}>
+              {#if p2}<Avatar player={p2} size="md" />{:else}<span class="avatar-placeholder"></span>{/if}
+              <span class="day-player-name">{nameFor(m.player2_id, m.player2_name)}</span>
+            </div>
+          </div>
+          {#if scores.length}
+            <div class="day-card-score">{formatScores(scores)}</div>
+          {/if}
+        </a>
+      {/if}
     {/each}
   </div>
+{/if}
+
+{#if editing}
+  <MatchEditModal
+    match={editing}
+    bestOf={editing.tournament_best_of}
+    p1Name={nameFor(editing.player1_id, editing.player1_name)}
+    p2Name={nameFor(editing.player2_id, editing.player2_name)}
+    onClose={() => { editing = null; }}
+    onSaved={() => { editing = null; invalidateAll(); }}
+  />
 {/if}
 
 <style>
@@ -119,6 +163,22 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  button.day-card:hover {
+    background: var(--surface);
+  }
+  .admin-edit-hint {
+    display: inline-block;
+    margin: 0 0 16px;
+    font-size: 0.88rem;
+    color: var(--accent-soft-text);
+    background: var(--accent-soft);
+    padding: 8px 14px;
+    border-radius: var(--radius-pill);
+    font-weight: 600;
   }
   .day-card:hover {
     transform: translateY(-2px);

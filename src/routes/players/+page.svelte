@@ -97,7 +97,7 @@
     </div>
   {:else}
     <!-- Desktop / tablet: full table -->
-    <table class="leaderboard-table desktop-only">
+    <table class="leaderboard-table hide-on-mobile">
       <thead>
         <tr>
           <th class="col-rank">#</th>
@@ -133,7 +133,7 @@
     </table>
 
     <!-- Mobile: card list (each row → single tappable card) -->
-    <div class="lb-cards mobile-only">
+    <div class="lb-cards hide-on-desktop">
       {#each rows as r, i (r.id)}
         <a href="/players/{r.id}" class="lb-card">
           <div class="lb-rank">#{i + 1}</div>
@@ -247,12 +247,12 @@
   .podium-2 { background: linear-gradient(160deg, rgba(199, 199, 204, 0.22) 0%, rgba(199, 199, 204, 0.04) 100%), var(--surface); }
   .podium-3 { background: linear-gradient(160deg, rgba(205, 127, 50, 0.18) 0%, rgba(205, 127, 50, 0.03) 100%), var(--surface); }
 
-  /* Mobile / desktop visibility helpers */
-  .desktop-only { display: table; }
-  .mobile-only { display: none; }
+  /* Visibility helpers — hide-by-feature so we don't override the
+     element's natural display value (table for <table>, flex for .lb-cards). */
+  .hide-on-desktop { display: none; }
   @media (max-width: 768px) {
-    .desktop-only { display: none !important; }
-    .mobile-only  { display: block !important; }
+    .hide-on-mobile  { display: none !important; }
+    .hide-on-desktop { display: revert !important; }
 
     .podium {
       grid-template-columns: 1fr;

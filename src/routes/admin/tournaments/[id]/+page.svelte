@@ -1,6 +1,11 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
+  import BracketView from '$lib/components/BracketView.svelte';
+  import MatchEditModal from '$lib/components/MatchEditModal.svelte';
+  import type { Match } from '$lib/db';
+
   let { data } = $props();
+  let editing = $state<Match | null>(null);
 
   let generating = $state(false);
   async function generate() {
@@ -14,16 +19,25 @@
     }
     generating = false;
   }
+
+  const playersById = $derived(
+    Object.fromEntries(data.tournamentPlayers.map(p => [p.player_id, { id: p.player_id, name: p.name }]))
+  );
+
+  function pName(id: string | null) {
+    if (!id) return '—';
+    return playersById[id]?.name ?? '?';
+  }
 </script>
 
 {#if !data.tournament}
   <p>Tournament not found.</p>
 {:else}
-  <h1>{data.tournament.name}</h1>
+  <h1 style="font-style:italic">{data.tournament.name}</h1>
   <p>Status: {data.tournament.status} · Best of {data.tournament.best_of}</p>
 
   {#if data.tournament.status === 'setup'}
-    <h2>Players in tournament ({data.tournamentPlayers.length})</h2>
+    <h2>Players ({data.tournamentPlayers.length})</h2>
     <ul>
       {#each data.tournamentPlayers as p (p.player_id)}
         <li>
@@ -39,7 +53,7 @@
     <h3>Add player</h3>
     <form method="POST" action="?/addPlayer" use:enhance>
       <select name="player_id" required>
-        <option value="">Select player...</option>
+        <option value="">Select…</option>
         {#each data.allPlayers.filter(p => !data.tournamentPlayers.some(tp => tp.player_id === p.id)) as p (p.id)}
           <option value={p.id}>{p.name}</option>
         {/each}
@@ -47,27 +61,30 @@
       <button type="submit">Add</button>
     </form>
 
-    <button onclick={generate} disabled={generating || data.tournamentPlayers.length < 2}>
-      {generating ? 'Generating…' : '🎲 Generate bracket'}
-    </button>
+    <p style="margin-top:24px">
+      <button onclick={generate} disabled={generating || data.tournamentPlayers.length < 2}>
+        {generating ? 'Generating…' : '🎲 Generate bracket'}
+      </button>
+    </p>
   {:else}
-    <h2>Bracket</h2>
-    <p>Click any match below to enter scores.</p>
-    <ul>
-      {#each data.matches as m (m.id)}
-        <li>
-          R{m.round} P{m.position}:
-          {data.tournamentPlayers.find(p => p.player_id === m.player1_id)?.name ?? '—'}
-          vs
-          {data.tournamentPlayers.find(p => p.player_id === m.player2_id)?.name ?? '—'}
-          {#if m.winner_id}
-            → winner: {data.tournamentPlayers.find(p => p.player_id === m.winner_id)?.name}
-            ({m.scores})
-          {/if}
-        </li>
-      {/each}
-    </ul>
+    <p><small>Click any match to enter scores.</small></p>
+    <BracketView
+      matches={data.matches}
+      {playersById}
+      onMatchClick={(m) => { editing = m; }}
+    />
   {/if}
 
-  <p><a href="/admin/tournaments">← Back to tournaments</a></p>
+  {#if editing}
+    <MatchEditModal
+      match={editing}
+      bestOf={data.tournament.best_of}
+      p1Name={pName(editing.player1_id)}
+      p2Name={pName(editing.player2_id)}
+      onClose={() => { editing = null; }}
+      onSaved={() => { editing = null; location.reload(); }}
+    />
+  {/if}
+
+  <p><a href="/admin/tournaments">← Back</a></p>
 {/if}

@@ -1,9 +1,20 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { COOKIE_NAME, COOKIE_MAX_AGE, signCookie } from '$lib/auth';
+import { countMatchesByDate } from '$lib/db';
 
-export const load: PageServerLoad = ({ locals }) => {
-  return { isAdmin: locals.isAdmin };
+function todayInAthens(): string {
+  return new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Europe/Athens',
+    year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(new Date());
+}
+
+export const load: PageServerLoad = async ({ locals, platform }) => {
+  if (!locals.isAdmin) return { isAdmin: false, today: '', todayCount: 0 };
+  const today = todayInAthens();
+  const todayCount = platform?.env.DB ? await countMatchesByDate(platform.env.DB, today) : 0;
+  return { isAdmin: true, today, todayCount };
 };
 
 export const actions: Actions = {

@@ -25,7 +25,8 @@ export const POST: RequestHandler = async ({ params, locals, platform }) => {
     player2_id: m.player2_id,
     winner_id: null,
     scores: null,
-    status: 'pending' as const
+    status: 'pending' as const,
+    scheduled_date: null
   })));
   await assignTournamentSeeds(db, params.id, result.seeds);
   await setTournamentStatus(db, params.id, 'in_progress');

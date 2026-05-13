@@ -27,6 +27,7 @@ export type Match = {
   winner_id: string | null;
   scores: string | null;
   status: 'pending' | 'completed';
+  scheduled_date: string | null; // 'YYYY-MM-DD'
 };
 
 export type TournamentPlayer = {
@@ -169,7 +170,7 @@ export async function clearMatches(db: D1Database, tournamentId: string): Promis
 
 export async function updateMatch(
   db: D1Database, id: string,
-  fields: Partial<Pick<Match, 'player1_id' | 'player2_id' | 'winner_id' | 'scores' | 'status'>>
+  fields: Partial<Pick<Match, 'player1_id' | 'player2_id' | 'winner_id' | 'scores' | 'status' | 'scheduled_date'>>
 ): Promise<void> {
   const sets: string[] = [];
   const values: (string | null)[] = [];
@@ -180,4 +181,37 @@ export async function updateMatch(
   if (sets.length === 0) return;
   values.push(id);
   await db.prepare(`UPDATE matches SET ${sets.join(', ')} WHERE id = ?`).bind(...values).run();
+}
+
+// ---------- Schedule ----------
+export type DayMatch = Match & {
+  tournament_name: string;
+  tournament_category: string;
+  tournament_best_of: number;
+  player1_name: string | null;
+  player2_name: string | null;
+};
+
+export async function listMatchesByDate(db: D1Database, date: string): Promise<DayMatch[]> {
+  const r = await db.prepare(`
+    SELECT
+      m.*,
+      t.name as tournament_name,
+      t.category as tournament_category,
+      t.best_of as tournament_best_of,
+      p1.name as player1_name,
+      p2.name as player2_name
+    FROM matches m
+    JOIN tournaments t ON t.id = m.tournament_id
+    LEFT JOIN players p1 ON p1.id = m.player1_id
+    LEFT JOIN players p2 ON p2.id = m.player2_id
+    WHERE m.scheduled_date = ?
+    ORDER BY m.status ASC, t.name ASC, m.round ASC, m.position ASC
+  `).bind(date).all<DayMatch>();
+  return r.results ?? [];
+}
+
+export async function countMatchesByDate(db: D1Database, date: string): Promise<number> {
+  const r = await db.prepare('SELECT COUNT(*) as n FROM matches WHERE scheduled_date = ?').bind(date).first<{ n: number }>();
+  return r?.n ?? 0;
 }

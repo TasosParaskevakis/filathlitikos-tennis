@@ -16,6 +16,7 @@
   let sets = $state<[number, number][]>(
     Array.from({ length: bestOf }, (_, i) => initial[i] ?? [0, 0])
   );
+  let scheduledDate = $state<string>(match.scheduled_date ?? '');
   let saving = $state(false);
   let error = $state<string | null>(null);
 
@@ -26,7 +27,10 @@
     const r = await fetch(`/api/admin/matches/${match.id}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scores: trimmed })
+      body: JSON.stringify({
+        scores: trimmed,
+        scheduled_date: scheduledDate || null
+      })
     });
     if (!r.ok) {
       error = await r.text();
@@ -78,6 +82,19 @@
   </div>
 
   <p class="hint">Leave a set as 0–0 to mean "not played".</p>
+
+  <div class="date-row">
+    <label for="match-date" class="date-label">Scheduled date</label>
+    <input
+      id="match-date"
+      type="date"
+      bind:value={scheduledDate}
+      class="date-input"
+    />
+    {#if scheduledDate}
+      <button type="button" class="btn-ghost btn-sm" onclick={() => { scheduledDate = ''; }}>Clear</button>
+    {/if}
+  </div>
 
   {#if error}<p class="error">{error}</p>{/if}
 
@@ -207,6 +224,25 @@
     margin: 16px 0 0;
     font-size: 0.85rem;
     color: var(--text-tertiary);
+  }
+
+  .date-row {
+    margin-top: 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .date-label {
+    margin: 0;
+    color: var(--fg2);
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+  .date-input {
+    width: auto;
+    flex: 1;
+    min-width: 160px;
   }
 
   .modal-actions {

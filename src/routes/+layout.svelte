@@ -1,11 +1,17 @@
 <script lang="ts">
-	import favicon from '$lib/assets/favicon.svg';
-
-	let { children } = $props();
+  import '../app.css';
+  let { children } = $props();
 </script>
 
-<svelte:head>
-	<link rel="icon" href={favicon} />
-</svelte:head>
+<header class="site-header">
+  <div class="brand">— Paraskevakis Tennis Club —</div>
+  <nav>
+    <a href="/">Tournaments</a>
+    <a href="/players">Leaderboard</a>
+    <a href="/admin">Admin</a>
+  </nav>
+</header>
 
-{@render children()}
+<main class="container">
+  {@render children()}
+</main>

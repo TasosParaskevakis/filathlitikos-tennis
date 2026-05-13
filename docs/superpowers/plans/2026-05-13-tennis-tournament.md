@@ -401,39 +401,63 @@ describe('nextMatchPosition', () => {
 });
 
 describe('generateMatches', () => {
+  it('2 players: single match, no later rounds', () => {
+    const result = generateMatches(['a', 'b']);
+    expect(result.matches.length).toBe(1);
+    const m = result.matches[0];
+    expect(m.round).toBe(1);
+    expect(m.player1_id).toBeTruthy();
+    expect(m.player2_id).toBeTruthy();
+  });
+
+  it('3 players: 1 bye → 1 r1 match + 1 final', () => {
+    const result = generateMatches(['a', 'b', 'c']);
+    expect(result.matches.length).toBe(2);
+    expect(result.matches.filter(m => m.round === 1).length).toBe(1);
+    expect(result.matches.filter(m => m.round === 2).length).toBe(1);
+    // Final has the bye player as player1 + null player2 (will be set when r1 winner advances)
+    const final = result.matches.find(m => m.round === 2)!;
+    expect(final.player1_id).toBeTruthy();
+    expect(final.player2_id).toBeNull();
+  });
+
   it('4 players: 2 round-1 matches, 1 final, no byes', () => {
     const players = ['a', 'b', 'c', 'd'];
     const result = generateMatches(players);
-    // round 1
     expect(result.matches.filter(m => m.round === 1).length).toBe(2);
-    // final (round 2)
     expect(result.matches.filter(m => m.round === 2).length).toBe(1);
-    // total
     expect(result.matches.length).toBe(3);
-    // round-1 matches have both players assigned
     for (const m of result.matches.filter(m => m.round === 1)) {
       expect(m.player1_id).toBeTruthy();
       expect(m.player2_id).toBeTruthy();
     }
-    // final is empty
     const final = result.matches.find(m => m.round === 2)!;
     expect(final.player1_id).toBeNull();
     expect(final.player2_id).toBeNull();
   });
 
-  it('6 players: 2 byes, 2 round-1 matches, 2 R2 matches (1 each side), 1 final', () => {
-    const players = ['a', 'b', 'c', 'd', 'e', 'f'];
-    const result = generateMatches(players);
-    // pow2 = 8, byes = 2
-    // round 1: 2 matches (4 non-bye players)
-    expect(result.matches.filter(m => m.round === 1).length).toBe(2);
-    // round 2: 2 matches (semis) — each has one bye player + one TBD
+  it('5 players: 3 byes (one r2 match has 2 byes meeting)', () => {
+    const result = generateMatches(['a', 'b', 'c', 'd', 'e']);
+    // pow2=8, byes=3 → 1 r1 match + 2 r2 + 1 r3 = 4 total
+    expect(result.matches.length).toBe(4);
+    expect(result.matches.filter(m => m.round === 1).length).toBe(1);
     expect(result.matches.filter(m => m.round === 2).length).toBe(2);
-    // round 3: final
     expect(result.matches.filter(m => m.round === 3).length).toBe(1);
-    // 2 round-2 matches should each have ONE player pre-filled (the bye)
-    const r2 = result.matches.filter(m => m.round === 2);
-    for (const m of r2) {
+    // R2 has 4 player slots total; 3 are byes, 1 is null (waiting for r1 winner)
+    const r2Filled = result.matches
+      .filter(m => m.round === 2)
+      .flatMap(m => [m.player1_id, m.player2_id])
+      .filter(Boolean).length;
+    expect(r2Filled).toBe(3);
+  });
+
+  it('6 players: 2 byes spread across r2 matches', () => {
+    const result = generateMatches(['a', 'b', 'c', 'd', 'e', 'f']);
+    expect(result.matches.filter(m => m.round === 1).length).toBe(2);
+    expect(result.matches.filter(m => m.round === 2).length).toBe(2);
+    expect(result.matches.filter(m => m.round === 3).length).toBe(1);
+    // Each r2 match has exactly one bye player (player1) and one null (player2 waiting for r1)
+    for (const m of result.matches.filter(m => m.round === 2)) {
       const filled = [m.player1_id, m.player2_id].filter(Boolean);
       expect(filled.length).toBe(1);
     }
@@ -543,65 +567,65 @@ export function generateMatches(playerIds: string[]): GenerationResult {
   const pow2 = nextPowerOf2(n);
   const byes = pow2 - n;
 
-  // Bye model: top `byes` seeds skip round 1 and appear in round-2 player1 slots
-  // (positions 0..byes-1). Each such bye REMOVES one round-1 match — specifically
-  // the one that would have fed that round-2 player1 slot, i.e. round-1 position 2*p.
-  // The OTHER feeder (round-1 position 2*p+1) does NOT exist either (a "match" with one
-  // player has no meaning; the bye player auto-advances). So each bye removes the
-  // entire r1 pair (2*p, 2*p+1), and the bye player + the winner-of-the-NEXT-r1-pair
-  // meet in r2.
-  //
-  // Wait — if both r1 positions for a bye are removed, then r2 player2 has no feeder.
-  // That contradicts the goal. Re-derive:
-  //   For r2 position p: feeders are r1 (2p, 2p+1). If r2 position p has a bye (p < byes):
-  //     - player1 = bye seed (filled now)
-  //     - player2 = winner of r1 (2p+1) ... but a single r1 position is one MATCH between
-  //       two players. So r1 (2p+1) IS a real match. r1 (2p) is what's removed.
-  // Number of r1 matches = (pow2/2) - byes. With pow2=8, byes=2: 4-2=2 r1 matches.
-  // We have 6-2=4 play players, paired into 2 matches. ✓
-
-  const matches: GeneratedMatch[] = [];
-
-  // Round 1: positions are everything in [0, pow2/2) EXCEPT the bye-left-feeders (even
-  // positions whose r2 parent is a bye slot)
-  const r1Size = pow2 / 2;
-  for (let pos = 0; pos < r1Size; pos++) {
-    const r2Pos = Math.floor(pos / 2);
-    const isLeftFeederForBye = (pos % 2 === 0) && (r2Pos < byes);
-    if (!isLeftFeederForBye) {
-      matches.push({ round: 1, position: pos, player1_id: null, player2_id: null });
-    }
+  // Special case: 2 players → single match, no later rounds
+  if (pow2 === 2) {
+    return {
+      matches: [{ round: 1, position: 0, player1_id: shuffled[0], player2_id: shuffled[1] }],
+      seeds
+    };
   }
 
-  // Rounds 2..final: full positions (no skipping)
-  let roundSize = r1Size / 2;
+  // Build empty rounds 2..final
+  const matches: GeneratedMatch[] = [];
+  let roundSize = pow2 / 4;
   let round = 2;
   while (roundSize >= 1) {
     for (let pos = 0; pos < roundSize; pos++) {
       matches.push({ round, position: pos, player1_id: null, player2_id: null });
     }
-    roundSize = roundSize / 2;
+    roundSize /= 2;
     round++;
   }
 
-  // Special case: only 1 round total (2 players, pow2=2)
-  // The loop above starts at round=2 with roundSize=1, then exits. Round-1 has the
-  // single match, which is correct.
-
-  // Place bye players into round-2 player1 slots
-  const byePlayerIds = shuffled.slice(0, byes);
-  for (let i = 0; i < byes; i++) {
-    const r2Match = matches.find(m => m.round === 2 && m.position === i);
-    if (r2Match) r2Match.player1_id = byePlayerIds[i];
+  // Place bye players directly into round-2 slots, spread evenly:
+  //   First pass: fill player1 of each r2 match in order (one bye per match).
+  //   Second pass: if byes remain, fill player2 of each r2 match in order.
+  // This matches standard bracket convention — byes only meet other byes when forced
+  // (i.e., when byes > number of r2 matches).
+  const r2Matches = matches.filter(m => m.round === 2);
+  const slotsNeedingR1Feeder: { r2Pos: number; slot: 'player1_id' | 'player2_id' }[] = [];
+  let byeIdx = 0;
+  for (let p = 0; p < r2Matches.length; p++) {
+    if (byeIdx < byes) {
+      r2Matches[p].player1_id = shuffled[byeIdx++];
+    } else {
+      slotsNeedingR1Feeder.push({ r2Pos: p, slot: 'player1_id' });
+    }
+  }
+  for (let p = 0; p < r2Matches.length; p++) {
+    if (byeIdx < byes) {
+      r2Matches[p].player2_id = shuffled[byeIdx++];
+    } else {
+      slotsNeedingR1Feeder.push({ r2Pos: p, slot: 'player2_id' });
+    }
   }
 
-  // Pair play players into round-1 matches (in r1 position order)
-  const playPlayerIds = shuffled.slice(byes);
-  const r1Matches = matches.filter(m => m.round === 1).sort((a, b) => a.position - b.position);
+  // Each remaining r2 slot needs an r1 winner. Compute the r1 match position that
+  // feeds it: r1 pos 2*r2Pos feeds player1, r1 pos 2*r2Pos+1 feeds player2.
+  const r1Positions = slotsNeedingR1Feeder
+    .map(({ r2Pos, slot }) => 2 * r2Pos + (slot === 'player2_id' ? 1 : 0))
+    .sort((a, b) => a - b);
+
+  // Pair the play players (those without byes) into r1 matches in r1-position order.
+  const playPlayers = shuffled.slice(byes);
   let pi = 0;
-  for (const m of r1Matches) {
-    m.player1_id = playPlayerIds[pi++] ?? null;
-    m.player2_id = playPlayerIds[pi++] ?? null;
+  for (const r1Pos of r1Positions) {
+    matches.push({
+      round: 1,
+      position: r1Pos,
+      player1_id: playPlayers[pi++] ?? null,
+      player2_id: playPlayers[pi++] ?? null
+    });
   }
 
   return { matches, seeds };
@@ -1046,7 +1070,7 @@ export async function insertMatches(db: D1Database, tournamentId: string, matche
   await db.batch(stmts);
 }
 
-export async function updateMatchSeeds(
+export async function assignTournamentSeeds(
   db: D1Database, tournamentId: string, seeds: { player_id: string; seed: number }[]
 ): Promise<void> {
   const stmts = seeds.map(s =>
@@ -1533,7 +1557,7 @@ import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import {
   getTournament, listTournamentPlayers, clearMatches, insertMatches,
-  updateMatchSeeds, setTournamentStatus
+  assignTournamentSeeds, setTournamentStatus
 } from '$lib/db';
 import { generateMatches } from '$lib/bracket';
 
@@ -1558,7 +1582,7 @@ export const POST: RequestHandler = async ({ params, locals, platform }) => {
     scores: null,
     status: 'pending' as const
   })));
-  await updateMatchSeeds(db, params.id, result.seeds);
+  await assignTournamentSeeds(db, params.id, result.seeds);
   await setTournamentStatus(db, params.id, 'in_progress');
 
   return json({ ok: true });

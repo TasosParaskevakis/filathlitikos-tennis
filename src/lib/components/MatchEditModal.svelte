@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Match } from '$lib/db';
   import { parseScores } from '$lib/scores';
+  import { fillNextEmptySet, indexOfNextEmptySet, type Set } from '$lib/set-fill';
 
   type Props = {
     match: Match;
@@ -19,6 +20,35 @@
   let scheduledDate = $state<string>(match.scheduled_date ?? '');
   let saving = $state(false);
   let error = $state<string | null>(null);
+
+  const QUICK_PICKS: Array<{ score: Set; label: string }> = [
+    { score: [6, 0], label: '6-0' },
+    { score: [6, 1], label: '6-1' },
+    { score: [6, 2], label: '6-2' },
+    { score: [6, 3], label: '6-3' },
+    { score: [6, 4], label: '6-4' },
+    { score: [7, 5], label: '7-5' },
+    { score: [7, 6], label: '7-6' }
+  ];
+
+  let lastFilledIndex = $state<number | null>(null);
+
+  function applyQuickPick(score: Set) {
+    const result = fillNextEmptySet(sets, score);
+    if (!result) return;
+    sets = result.sets;
+    lastFilledIndex = result.filledIndex;
+  }
+
+  function clearLast() {
+    if (lastFilledIndex === null) return;
+    sets[lastFilledIndex] = [0, 0];
+    sets = [...sets];
+    lastFilledIndex = null;
+  }
+
+  const nextEmptyIdx = $derived(indexOfNextEmptySet(sets));
+  const allSetsFilled = $derived(nextEmptyIdx === -1);
 
   async function save() {
     saving = true;
@@ -79,6 +109,48 @@
         {/each}
       </div>
     </div>
+  </div>
+
+  <div class="qp-section">
+    <div class="qp-label">
+      {#if allSetsFilled}
+        All sets filled — clear one to add more.
+      {:else}
+        Tap to fill <strong>Set {nextEmptyIdx + 1} of {bestOf}</strong>
+      {/if}
+    </div>
+    <div class="qp-row">
+      <span class="qp-row-label">{p1Name} wins</span>
+      <div class="qp-grid">
+        {#each QUICK_PICKS as { score, label } (label)}
+          <button
+            type="button"
+            class="qp-pill"
+            disabled={allSetsFilled}
+            onclick={() => applyQuickPick(score)}
+          >{label}</button>
+        {/each}
+      </div>
+    </div>
+    <div class="qp-row">
+      <span class="qp-row-label">{p2Name} wins</span>
+      <div class="qp-grid">
+        {#each QUICK_PICKS as { score, label } (label)}
+          <button
+            type="button"
+            class="qp-pill"
+            disabled={allSetsFilled}
+            onclick={() => applyQuickPick([score[1], score[0]])}
+          >{score[1]}-{score[0]}</button>
+        {/each}
+      </div>
+    </div>
+    <button
+      type="button"
+      class="btn-ghost btn-sm qp-clear"
+      disabled={lastFilledIndex === null}
+      onclick={clearLast}
+    >← Clear last</button>
   </div>
 
   <p class="hint">Leave a set as 0–0 to mean "not played".</p>

@@ -5,6 +5,13 @@
   let { children } = $props();
   let menuOpen = $state(false);
 
+  let layoutData = $derived($page.data as { isAdmin?: boolean; pendingTodayCount?: number });
+  const pendingBadge = $derived(
+    layoutData.isAdmin && layoutData.pendingTodayCount && layoutData.pendingTodayCount > 0
+      ? layoutData.pendingTodayCount > 9 ? '9+' : String(layoutData.pendingTodayCount)
+      : null
+  );
+
   const isActive = (path: string) => {
     const p = $page.url.pathname;
     if (path === '/') return p === '/' || p.startsWith('/tournaments');
@@ -50,7 +57,10 @@
       <a href="/" class:active={isActive('/')}>Tournaments</a>
       <a href="/today" class:active={isActive('/today')}>Today</a>
       <a href="/players" class:active={isActive('/players')}>Leaderboard</a>
-      <a href="/admin" class:active={isActive('/admin')}>Admin</a>
+      <a href="/admin" class:active={isActive('/admin')}>
+        Admin
+        {#if pendingBadge}<span class="nav-badge" title="{layoutData.pendingTodayCount} pending matches today">{pendingBadge}</span>{/if}
+      </a>
     </nav>
   </div>
 

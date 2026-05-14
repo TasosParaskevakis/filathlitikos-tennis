@@ -10,8 +10,12 @@
     p2Name: string;
     onClose: () => void;
     onSaved: () => void;
+    onSavedAndNext?: () => void;
   };
-  let { match, bestOf, p1Name, p2Name, onClose, onSaved }: Props = $props();
+  let {
+    match, bestOf, p1Name, p2Name,
+    onClose, onSaved, onSavedAndNext
+  }: Props = $props();
 
   const initial = parseScores(match.scores);
   let sets = $state<[number, number][]>(
@@ -70,6 +74,25 @@
     onSaved();
   }
 
+  async function saveAndNext() {
+    saving = true;
+    error = null;
+    const trimmed = sets.filter(([a, b]) => a > 0 || b > 0);
+    const r = await fetch(`/api/admin/matches/${match.id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scores: trimmed })
+    });
+    if (!r.ok) {
+      error = await r.text();
+      saving = false;
+      return;
+    }
+    saving = false;
+    if (onSavedAndNext) onSavedAndNext();
+    else onSaved();
+  }
+
   let walkoverPending = $state<string | null>(null); // player_id being saved
 
   async function walkover(winnerPlayerId: string, winnerName: string) {
@@ -87,7 +110,8 @@
       return;
     }
     walkoverPending = null;
-    onSaved();
+    if (onSavedAndNext) onSavedAndNext();
+    else onSaved();
   }
 
   function handleKeydown(e: KeyboardEvent) {
@@ -215,8 +239,29 @@
   {#if error}<p class="error">{error}</p>{/if}
 
   <div class="modal-actions">
-    <button onclick={onClose} class="btn-ghost">Cancel</button>
-    <button onclick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
+    <button
+      type="button"
+      class="btn-ghost"
+      onclick={onClose}
+      disabled={saving || walkoverPending !== null}
+    >Cancel</button>
+
+    <div class="modal-actions-right">
+      <button
+        type="button"
+        onclick={save}
+        disabled={saving || walkoverPending !== null}
+      >{saving ? 'Saving…' : 'Save'}</button>
+
+      {#if onSavedAndNext}
+        <button
+          type="button"
+          class="btn-secondary"
+          onclick={saveAndNext}
+          disabled={saving || walkoverPending !== null}
+        >{saving ? 'Saving…' : 'Save & next →'}</button>
+      {/if}
+    </div>
   </div>
 </div>
 
@@ -359,13 +404,6 @@
     width: auto;
     flex: 1;
     min-width: 160px;
-  }
-
-  .modal-actions {
-    margin-top: 24px;
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
   }
 
   .error { margin: 12px 0 0; }

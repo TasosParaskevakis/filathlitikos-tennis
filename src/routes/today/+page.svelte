@@ -2,11 +2,17 @@
   import { goto, invalidateAll } from '$app/navigation';
   import Avatar from '$lib/components/Avatar.svelte';
   import MatchEditModal from '$lib/components/MatchEditModal.svelte';
+  import { findNextPendingMatch } from '$lib/match-flow';
   import { parseScores, formatScores } from '$lib/scores';
   import type { DayMatch } from '$lib/db';
 
   let { data } = $props();
   let editing = $state<DayMatch | null>(null);
+  let toast = $state<string | null>(null);
+  function showToast(msg: string) {
+    toast = msg;
+    setTimeout(() => { if (toast === msg) toast = null; }, 3500);
+  }
 
   function setDate(d: string) {
     goto(`/today?date=${d}`, { keepFocus: false });
@@ -132,7 +138,22 @@
     p2Name={nameFor(editing.player2_id, editing.player2_name)}
     onClose={() => { editing = null; }}
     onSaved={() => { editing = null; invalidateAll(); }}
+    onSavedAndNext={async () => {
+      const currentId = editing!.id;
+      await invalidateAll();
+      const next = findNextPendingMatch(data.matches, currentId);
+      if (next) {
+        editing = next as typeof editing;
+      } else {
+        editing = null;
+        showToast('All caught up — no more matches today.');
+      }
+    }}
   />
+{/if}
+
+{#if toast}
+  <div class="toast" role="status">{toast}</div>
 {/if}
 
 <style>

@@ -1186,3 +1186,25 @@ hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
   }
   .modal-actions button { width: 100%; }
 }
+
+/* Bottom toast for short status messages */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--fg1);
+  color: var(--bg);
+  padding: 12px 20px;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  font-size: 0.92rem;
+  box-shadow: var(--shadow-lg);
+  z-index: 12;
+  animation: toastIn 200ms var(--ease);
+  max-width: calc(100vw - 32px);
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}

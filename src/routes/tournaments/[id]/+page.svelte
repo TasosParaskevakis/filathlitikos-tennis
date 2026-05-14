@@ -3,10 +3,16 @@
   import BracketView from '$lib/components/BracketView.svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import MatchEditModal from '$lib/components/MatchEditModal.svelte';
+  import { findNextPendingMatch } from '$lib/match-flow';
   import type { Match } from '$lib/db';
   let { data } = $props();
 
   let editing = $state<Match | null>(null);
+  let toast = $state<string | null>(null);
+  function showToast(msg: string) {
+    toast = msg;
+    setTimeout(() => { if (toast === msg) toast = null; }, 3500);
+  }
 
   const statusLabel = (s: string) =>
     s === 'in_progress' ? 'In progress' : s === 'completed' ? 'Completed' : 'Setup';
@@ -76,7 +82,22 @@
       p2Name={pName(editing.player2_id)}
       onClose={() => { editing = null; }}
       onSaved={() => { editing = null; invalidateAll(); }}
+      onSavedAndNext={async () => {
+        const currentId = editing!.id;
+        await invalidateAll();
+        const next = findNextPendingMatch(data.matches, currentId);
+        if (next) {
+          editing = next;
+        } else {
+          editing = null;
+          showToast('All caught up — no more matches to score.');
+        }
+      }}
     />
+  {/if}
+
+  {#if toast}
+    <div class="toast" role="status">{toast}</div>
   {/if}
 {/if}
 

@@ -1139,3 +1139,27 @@ hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
   .qp-row { flex-direction: column; align-items: flex-start; gap: 6px; }
   .qp-row-label { min-width: 0; }
 }
+
+/* Walkover section in match modal */
+.wo-section {
+  margin: 12px 0;
+  padding: 14px;
+  background: var(--bg-muted);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.wo-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--fg2);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.wo-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.wo-btn { flex: 1; min-width: 160px; }

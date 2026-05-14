@@ -70,6 +70,26 @@
     onSaved();
   }
 
+  let walkoverPending = $state<string | null>(null); // player_id being saved
+
+  async function walkover(winnerPlayerId: string, winnerName: string) {
+    if (!confirm(`Mark ${winnerName} as winner by walkover? Scores will be cleared.`)) return;
+    walkoverPending = winnerPlayerId;
+    error = null;
+    const r = await fetch(`/api/admin/matches/${match.id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ walkover_winner_id: winnerPlayerId })
+    });
+    if (!r.ok) {
+      error = await r.text();
+      walkoverPending = null;
+      return;
+    }
+    walkoverPending = null;
+    onSaved();
+  }
+
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape') onClose();
   }
@@ -154,6 +174,30 @@
   </div>
 
   <p class="hint">Leave a set as 0–0 to mean "not played".</p>
+
+  {#if match.player1_id && match.player2_id}
+    <div class="wo-section">
+      <div class="wo-label">Walkover (no scores played)</div>
+      <div class="wo-buttons">
+        <button
+          type="button"
+          class="btn-ghost btn-sm wo-btn"
+          disabled={walkoverPending !== null}
+          onclick={() => walkover(match.player1_id!, p1Name)}
+        >
+          {walkoverPending === match.player1_id ? 'Saving…' : `→ ${p1Name} wins`}
+        </button>
+        <button
+          type="button"
+          class="btn-ghost btn-sm wo-btn"
+          disabled={walkoverPending !== null}
+          onclick={() => walkover(match.player2_id!, p2Name)}
+        >
+          {walkoverPending === match.player2_id ? 'Saving…' : `→ ${p2Name} wins`}
+        </button>
+      </div>
+    </div>
+  {/if}
 
   <div class="date-row">
     <label for="match-date" class="date-label">Scheduled date</label>
